@@ -142,19 +142,51 @@ static const char* indexHtml PROGMEM = R"rawliteral(
 static const size_t indexHtmlLength = strlen_P(indexHtml);
 
 // variables to store current state of RGBA
-int rangeRed = 0;
-int rangeGreen = 0;
-int rangeBlue = 0;
-float rangeAlpha = 0.0;
+int valueRed = 0;
+int valueGreen = 0;
+int valueBlue = 0;
+float valueAlpha = 0.0;
+
+// Updates LED from current values
+void updateRGBALed() {
+  // built-in rgb led pins are active-low
+  analogWrite(LED_RED, 255 - (int)round(valueRed * valueAlpha));
+  analogWrite(LED_GREEN, 255 - (int)round(valueGreen * valueAlpha));
+  analogWrite(LED_BLUE, 255 - (int)round(valueBlue * valueAlpha));
+}
+// Updates RGBA values and LED
+bool updateRGBALed(int red, int green, int blue, float alpha) {
+  if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255 || alpha < 0.0 || alpha > 1.0) {
+    return false;
+  }
+  valueRed = red;
+  valueGreen = green;
+  valueBlue = blue;
+  valueAlpha = alpha;
+  updateRGBALed();
+  return true;
+}
+
+// Variable to store current value of built-in led
+bool ledBuiltInState = false;
+// Updates built-in Led state
+bool updateBuildInLed(bool newState) {
+  if (ledBuiltInState != newState) {
+    ledBuiltInState = newState;
+    digitalWrite(LED_BUILTIN, newState ? HIGH : LOW);
+    return true;
+  }
+  return false;
+}
 
 AsyncJsonResponse* getRgbaJsonResponse() {
   AsyncJsonResponse* response = new AsyncJsonResponse();
 
   JsonObject root = response->getRoot().to<JsonObject>();
-  root["red"] = rangeRed;
-  root["green"] = rangeGreen;
-  root["blue"] = rangeBlue;
-  root["alpha"] = rangeAlpha;
+  root["red"] = valueRed;
+  root["green"] = valueGreen;
+  root["blue"] = valueBlue;
+  root["alpha"] = valueAlpha;
 
   return response;
 }
@@ -171,9 +203,9 @@ void setup() {
   Serial.begin(115200);
   // wait for 2000ms
   for (static uint8_t i = 0; i < 10; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
+    updateBuildInLed(true);
     delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
+    updateBuildInLed(false);
     delay(100);
   }
   Serial.println();
@@ -275,9 +307,9 @@ void setup() {
   WiFi.begin(sta_ssid, sta_passphrase);
   // Wait for WiFi to connect for a maximum timeout of 5000ms
   for (static uint8_t i = 0; !WiFi.isConnected() && i < 5; i++) {
-    digitalWrite(LED_BUILTIN, HIGH);
+    updateBuildInLed(true);
     delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
+    updateBuildInLed(false);
     delay(500);
   }
   if (WiFi.isConnected()) {
@@ -314,7 +346,8 @@ void setup() {
 
         if (!body["red"].is<int>() || !body["green"].is<int>() || !body["blue"].is<int>() ||
             !body["alpha"].is<float>()) {
-          request->send(400, "text/plain", "400: Bad Request [missing/invalid attribute(s) value type]");
+          request->send(
+              400, "text/plain", "400: Bad Request [missing attributes(s) or invalid attribute(s) value type]");
           return;
         }
 
@@ -323,15 +356,11 @@ void setup() {
         int blue = body["blue"];
         float alpha = body["alpha"];
 
-        if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255 || alpha < 0.0 || alpha > 1.0) {
+        bool isUpdated = updateRGBALed(red, green, blue, alpha);
+        if (!isUpdated) {
           request->send(400, "text/plain", "400: Bad Request [invalid attribute(s) value]");
           return;
         }
-
-        rangeRed = red;
-        rangeGreen = green;
-        rangeBlue = blue;
-        rangeAlpha = alpha;
 
         AsyncJsonResponse* response = getRgbaJsonResponse();
 
@@ -344,13 +373,13 @@ void setup() {
   server.addHandler(restRgbaJsonHandler);
 
   // blink the built-in led
-  digitalWrite(LED_BUILTIN, HIGH);
+  updateBuildInLed(true);
   delay(200);
-  digitalWrite(LED_BUILTIN, LOW);
+  updateBuildInLed(false);
   delay(200);
-  digitalWrite(LED_BUILTIN, HIGH);
+  updateBuildInLed(true);
   delay(200);
-  digitalWrite(LED_BUILTIN, LOW);
+  updateBuildInLed(false);
 
   // start the web server
   Serial.println(">=====>");
@@ -362,23 +391,12 @@ void setup() {
   Serial.println("<=====<");
 }
 
-static uint32_t lastLed = 0;
 static uint32_t lastWifi = 0;
 static uint32_t lastBlink = 0;
 static bool ledState = false;
 
 void loop() {
   uint32_t now = millis();
-
-  // update rgb leds after every 250ms
-  if (lastLed == 0 || now - lastLed >= 250) {
-    // built-in rgb led pins are active-low
-    analogWrite(LED_RED, 255 - (int)round(rangeRed * rangeAlpha));
-    analogWrite(LED_GREEN, 255 - (int)round(rangeGreen * rangeAlpha));
-    analogWrite(LED_BLUE, 255 - (int)round(rangeBlue * rangeAlpha));
-
-    lastLed = millis();
-  }
 
   // try reconnecting to AP every 10000ms
   if (!WiFi.isConnected()) {
@@ -395,13 +413,11 @@ void loop() {
 
     // blink built-in led after every 500ms when reconnecting
     if (lastBlink == 0 || now - lastBlink >= 500) {
-      ledState = !ledState;
-      digitalWrite(LED_BUILTIN, ledState ? HIGH : LOW);
+      updateBuildInLed(!ledBuiltInState);
 
       lastBlink = millis();
     }
-  } else if (ledState) {
-    ledState = false;
-    digitalWrite(LED_BUILTIN, LOW);
+  } else if (ledBuiltInState) {
+    updateBuildInLed(false);
   }
 }
