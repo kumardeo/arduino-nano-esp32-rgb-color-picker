@@ -170,7 +170,7 @@ bool updateRGBALed(int red, int green, int blue, float alpha) {
 // Variable to store current value of built-in led
 bool ledBuiltInState = false;
 // Updates built-in Led state
-bool updateBuildInLed(bool newState) {
+bool updateBuiltInLed(bool newState) {
   if (ledBuiltInState != newState) {
     ledBuiltInState = newState;
     digitalWrite(LED_BUILTIN, newState ? HIGH : LOW);
@@ -203,9 +203,9 @@ void setup() {
   Serial.begin(115200);
   // wait for 2000ms
   for (static uint8_t i = 0; i < 10; i++) {
-    updateBuildInLed(true);
+    updateBuiltInLed(true);
     delay(100);
-    updateBuildInLed(false);
+    updateBuiltInLed(false);
     delay(100);
   }
   Serial.println();
@@ -307,9 +307,9 @@ void setup() {
   WiFi.begin(sta_ssid, sta_passphrase);
   // Wait for WiFi to connect for a maximum timeout of 5000ms
   for (static uint8_t i = 0; !WiFi.isConnected() && i < 5; i++) {
-    updateBuildInLed(true);
+    updateBuiltInLed(true);
     delay(500);
-    updateBuildInLed(false);
+    updateBuiltInLed(false);
     delay(500);
   }
   if (WiFi.isConnected()) {
@@ -373,13 +373,13 @@ void setup() {
   server.addHandler(restRgbaJsonHandler);
 
   // blink the built-in led
-  updateBuildInLed(true);
+  updateBuiltInLed(true);
   delay(200);
-  updateBuildInLed(false);
+  updateBuiltInLed(false);
   delay(200);
-  updateBuildInLed(true);
+  updateBuiltInLed(true);
   delay(200);
-  updateBuildInLed(false);
+  updateBuiltInLed(false);
 
   // start the web server
   Serial.println(">=====>");
@@ -413,11 +413,11 @@ void loop() {
 
     // blink built-in led after every 500ms when reconnecting
     if (lastBlink == 0 || now - lastBlink >= 500) {
-      updateBuildInLed(!ledBuiltInState);
+      updateBuiltInLed(!ledBuiltInState);
 
       lastBlink = millis();
     }
   } else if (ledBuiltInState) {
-    updateBuildInLed(false);
+    updateBuiltInLed(false);
   }
 }
