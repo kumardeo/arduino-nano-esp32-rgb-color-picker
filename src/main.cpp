@@ -155,7 +155,7 @@ void updateRGBALed() {
   analogWrite(LED_BLUE, 255 - (int)round(valueBlue * valueAlpha));
 }
 // Updates RGBA values and LED
-bool updateRGBALed(int red, int green, int blue, float alpha) {
+bool updateRGBALed(int red, int green, int blue, float alpha = 1) {
   if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255 || alpha < 0.0 || alpha > 1.0) {
     return false;
   }
@@ -198,6 +198,10 @@ void setup() {
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
+
+  // Set LEDs states initially
+  updateBuiltInLed(false);
+  updateRGBALed();
 
   // Setup serial monitor
   Serial.begin(115200);
