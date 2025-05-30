@@ -30,7 +30,8 @@ static const char* indexHtml PROGMEM = R"rawliteral(
     *,::after,::before{-webkit-box-sizing:border-box;box-sizing:border-box}
     body{padding:0;margin:0}
     .main-wrapper{padding:20px;display:flex;align-items:center;justify-content:center;min-height:100dvh}
-    .color-picker.disabled{opacity:0.8;pointer-events:none}
+    .color-picker.disabled{opacity:0.6;animation:picker-disabled 0.3s linear infinite;pointer-events:none}
+    @keyframes picker-disabled{0%{opacity:0.6}50%{opacity:0.2}100%{opacity:0.6}}
   </style>
 </head>
 
@@ -216,98 +217,101 @@ void setup() {
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        Serial.println(">=====>");
-        Serial.println("ESP connected to an Access Point.");
-        Serial.print("SSID: ");
-        Serial.println(WiFi.SSID());
-        Serial.print("Local IP: ");
-        Serial.println(WiFi.localIP());
-        Serial.print("Gateway: ");
-        Serial.println(WiFi.gatewayIP());
-        Serial.print("Subnet: ");
-        Serial.println(WiFi.subnetMask());
-        Serial.print("Dns: ");
-        Serial.println(WiFi.dnsIP());
-        Serial.println("<=====<");
+        Serial.printf(
+            "> ESP is connected to an access point.\n"
+            "  SSID: %s\n"
+            "  Local IP: %s\n"
+            "  Gateway: %s\n"
+            "  Subnet: %s\n"
+            "  Dns: %s\n",
+            WiFi.SSID().c_str(),
+            WiFi.localIP().toString().c_str(),
+            WiFi.gatewayIP().toString().c_str(),
+            WiFi.subnetMask().toString().c_str(),
+            WiFi.dnsIP().toString().c_str()
+        );
       },
-      WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
+      WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED
+  );
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        Serial.println(">=====>");
-        Serial.println("ESP disconnected from an Access Point.");
-        Serial.println("<=====<");
+        Serial.println("> ESP has been disconnected from an access point.");
       },
-      WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+      WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED
+  );
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        Serial.println(">=====>");
-        Serial.println("STA connected to ESP Access Point.");
-        Serial.print("MAC: ");
-        Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X",
-                      info.wifi_ap_staconnected.mac[0],
-                      info.wifi_ap_staconnected.mac[1],
-                      info.wifi_ap_staconnected.mac[2],
-                      info.wifi_ap_staconnected.mac[3],
-                      info.wifi_ap_staconnected.mac[4],
-                      info.wifi_ap_staconnected.mac[5]);
-        Serial.println();
-        Serial.println("<=====<");
+        Serial.printf(
+            "> An STA is connected to ESP access point.\n"
+            "  MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+            info.wifi_ap_staconnected.mac[0],
+            info.wifi_ap_staconnected.mac[1],
+            info.wifi_ap_staconnected.mac[2],
+            info.wifi_ap_staconnected.mac[3],
+            info.wifi_ap_staconnected.mac[4],
+            info.wifi_ap_staconnected.mac[5]
+        );
       },
-      WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED);
+      WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STACONNECTED
+  );
 
   WiFi.onEvent(
       [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        Serial.println(">=====>");
-        Serial.println("STA disconnected from ESP Access Point.");
-        Serial.print("MAC: ");
-        Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X",
-                      info.wifi_ap_staconnected.mac[0],
-                      info.wifi_ap_staconnected.mac[1],
-                      info.wifi_ap_staconnected.mac[2],
-                      info.wifi_ap_staconnected.mac[3],
-                      info.wifi_ap_staconnected.mac[4],
-                      info.wifi_ap_staconnected.mac[5]);
-        Serial.println();
-        Serial.println("<=====<");
+        Serial.printf(
+            "> An STA has been disconnected from ESP access point.\n"
+            "  MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+            info.wifi_ap_staconnected.mac[0],
+            info.wifi_ap_staconnected.mac[1],
+            info.wifi_ap_staconnected.mac[2],
+            info.wifi_ap_staconnected.mac[3],
+            info.wifi_ap_staconnected.mac[4],
+            info.wifi_ap_staconnected.mac[5]
+        );
       },
-      WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED);
+      WiFiEvent_t::ARDUINO_EVENT_WIFI_AP_STADISCONNECTED
+  );
 
   // Configure WiFi
-  Serial.println(">=====>");
-  Serial.println("ESP WiFi is being configured (WIFI_AP_STA)...");
-  static bool isWiFiConfigured = WiFi.mode(WIFI_AP_STA);
+  static bool isWiFiConfigured = WiFi.mode(WIFI_AP_STA) && WiFi.setAutoReconnect(false) && WiFi.setSleep(WIFI_PS_NONE);
 
   if (isWiFiConfigured) {
-    Serial.println("ESP WiFi successfully configured.");
+    Serial.print(
+        "> ESP WiFi is successfully configured.\n"
+        "  Mode: WIFI_AP_STA\n"
+        "  Reconnect: Manual (every 10s)\n"
+        "  Power Save: None\n"
+    );
   } else {
-    Serial.println("ESP WiFi failed to configure. Restarting...");
+    Serial.print(
+        "> ESP WiFi is failed to configure.\n"
+        "  Restarting...\n"
+    );
     // restart the esp if failed to configure WiFi
     ESP.restart();
   }
-  Serial.println("<=====<");
 
   // Configure AP
-  Serial.println(">=====>");
-  Serial.println("ESP is creating an Access Point (AP_MODE).");
   static bool isAPStarted = WiFi.softAP(ap_ssid, ap_passphrase);
   if (isAPStarted) {
-    Serial.println("ESP created Access point.");
-    Serial.print("SSID: ");
-    Serial.println(WiFi.softAPSSID());
-    Serial.print("IP: ");
-    Serial.println(WiFi.softAPIP());
+    Serial.printf(
+        "> ESP created access point.\n"
+        "  SSID: %s\n"
+        "  IP: %s\n",
+        WiFi.softAPSSID().c_str(),
+        WiFi.softAPIP().toString().c_str()
+    );
   } else {
-    Serial.println("ESP failed to create Access point. Restarting ESP...");
+    Serial.print(
+        "> ESP failed to create access point.\n"
+        "  Restarting...\n"
+    );
     // restart the esp if failed to create access point
     ESP.restart();
   }
-  Serial.println("<=====<");
 
   // Configure STA
-  Serial.println(">=====>");
-  Serial.println("ESP is connecting to an Access Point (STA_MODE).");
   WiFi.begin(sta_ssid, sta_passphrase);
   // Wait for WiFi to connect for a maximum timeout of 5000ms
   for (static uint8_t i = 0; !WiFi.isConnected() && i < 5; i++) {
@@ -317,19 +321,15 @@ void setup() {
     delay(500);
   }
   if (WiFi.isConnected()) {
-    Serial.println("ESP successfully connected to an Access Point.");
+    Serial.println("> ESP is successfully connected to an access point.");
   } else {
-    Serial.println("ESP failed to connected to an Access Point.");
+    Serial.println("> ESP is failed to connect to an access point.");
   }
-  Serial.println("<=====<");
 
   server.addMiddleware([](AsyncWebServerRequest* request, ArMiddlewareNext next) {
-    Serial.print("> ");
-    Serial.print(request->methodToString());
-    Serial.print(" ");
-    Serial.println(request->url().c_str());
-
     next();
+
+    Serial.printf("> %s %s %d\n", request->methodToString(), request->url().c_str(), request->getResponse()->code());
   });
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -351,7 +351,8 @@ void setup() {
         if (!body["red"].is<int>() || !body["green"].is<int>() || !body["blue"].is<int>() ||
             !body["alpha"].is<float>()) {
           request->send(
-              400, "text/plain", "400: Bad Request [missing attributes(s) or invalid attribute(s) value type]");
+              400, "text/plain", "400: Bad Request [missing attributes(s) or invalid attribute(s) value type]"
+          );
           return;
         }
 
@@ -386,13 +387,9 @@ void setup() {
   updateBuiltInLed(false);
 
   // start the web server
-  Serial.println(">=====>");
-  Serial.println("Starting server.");
-
   server.begin();
 
-  Serial.println("Server is successfully started.");
-  Serial.println("<=====<");
+  Serial.println("> Server is successfully started.");
 }
 
 static uint32_t lastWifi = 0;
@@ -405,12 +402,9 @@ void loop() {
   // try reconnecting to AP every 10000ms
   if (!WiFi.isConnected()) {
     if (lastWifi == 0 || now - lastWifi >= 10000) {
-      Serial.println(">=====>");
-      Serial.println("ESP is retrying to connect to an Access Point (STA_MODE).");
+      Serial.println("> ESP is retrying to connect to an access point.");
 
       WiFi.reconnect();
-
-      Serial.println("<=====<");
 
       lastWifi = millis();
     }
