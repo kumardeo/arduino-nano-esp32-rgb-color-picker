@@ -5,7 +5,14 @@
 #include <ESPAsyncWebServer.h>
 #include <WiFi.h>
 
-static const char* ap_ssid = "Arduino Nano ESP32";
+#ifndef ARDUINO_NANO_ESP32
+static constexpr uint8_t LED_BUILTIN = 2;
+static constexpr uint8_t LED_RED = 46;
+static constexpr uint8_t LED_GREEN = 0;
+static constexpr uint8_t LED_BLUE = 45;
+#endif
+
+static const char* ap_ssid = "ESP32-RGB";
 // set to NULL to make AP open
 static const char* ap_passphrase = "12345678";
 
@@ -18,7 +25,7 @@ static const char* indexHtml PROGMEM = R"rawliteral(
 <html>
 
 <head>
-  <title>NANO ESP32 RGB Color Picker</title>
+  <title>ESP32 RGB Color Picker</title>
   <meta content="width=device-width, initial-scale=1.0, user-scalable=1.0, minimum-scale=1.0, maximum-scale=5.0"
     name="viewport" />
   <link rel="icon" href="data:," />
@@ -143,10 +150,11 @@ static const char* indexHtml PROGMEM = R"rawliteral(
 static const size_t indexHtmlLength = strlen_P(indexHtml);
 
 // variables to store current state of RGBA
-int valueRed = 0;
-int valueGreen = 0;
-int valueBlue = 0;
-float valueAlpha = 0.0;
+// initial value: rgba(229, 17, 165, 1)
+int valueRed = 229;
+int valueGreen = 17;
+int valueBlue = 165;
+float valueAlpha = 1.0F;
 
 // Updates LED from current values
 void updateRGBALed() {
@@ -156,8 +164,8 @@ void updateRGBALed() {
   analogWrite(LED_BLUE, 255 - (int)round(valueBlue * valueAlpha));
 }
 // Updates RGBA values and LED
-bool updateRGBALed(int red, int green, int blue, float alpha = 1) {
-  if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255 || alpha < 0.0 || alpha > 1.0) {
+bool updateRGBALed(int red, int green, int blue, float alpha = 1.0F) {
+  if (red < 0 || red > 255 || green < 0 || green > 255 || blue < 0 || blue > 255 || alpha < 0.0F || alpha > 1.0F) {
     return false;
   }
   valueRed = red;
