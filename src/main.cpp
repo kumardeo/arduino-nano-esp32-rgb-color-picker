@@ -158,10 +158,16 @@ float valueAlpha = 1.0F;
 
 // Updates LED from current values
 void updateRGBALed() {
-  // built-in rgb led pins are active-low
+#ifdef ARDUINO_NANO_ESP32
+  // arduino nano esp32's built-in rgb led pins are active-low
   analogWrite(LED_RED, 255 - (int)round(valueRed * valueAlpha));
   analogWrite(LED_GREEN, 255 - (int)round(valueGreen * valueAlpha));
   analogWrite(LED_BLUE, 255 - (int)round(valueBlue * valueAlpha));
+#else
+  analogWrite(LED_RED, (int)round(valueRed * valueAlpha));
+  analogWrite(LED_GREEN, (int)round(valueGreen * valueAlpha));
+  analogWrite(LED_BLUE, (int)round(valueBlue * valueAlpha));
+#endif
 }
 // Updates RGBA values and LED
 bool updateRGBALed(int red, int green, int blue, float alpha = 1.0F) {
